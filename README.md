@@ -50,7 +50,7 @@ Toplu mesaj alıcılarını ve teslimat durumlarını depolar.
 
 
 ## indexler
-Aşağıdaki indeksler, veritabanı sorgularını hızlandırmak için oluşturulmuştur.
+İndeksler veritabanı sorgularını hızlandırmak için oluşturulmuştur.
 
 
 ## İlişkiler
