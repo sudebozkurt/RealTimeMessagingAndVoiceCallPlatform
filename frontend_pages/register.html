@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet" href="register.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <script src="register.js" defer></script>
+</head>
+<body>
+    <div class="register-container">
+        <h1 style="font-family: 'Pacifico', cursive;">Register</h1>
+        <div class="image-container">
+            <label for="profile-pic" class="image-label">
+                <img id="profile-preview" src="avatar.png" alt="Resim Ekle" style="width: 80px; height: 80px;"> <!-- Resim Ekle -->
+                <span></span>
+            </label>
+            <input type="file" id="profile-pic" accept="image/*" onchange="loadImage(event)" style="display: none;" />
+        </div>
+
+        <form class="register-form" onsubmit="handleRegister(event)">
+            <input type="text" placeholder="Username" required>
+            <i class="bi bi-person-circle"></i><br>
+            <input type="password" placeholder="Password" required>
+            <i id="togglePassword" class="bi bi-eye-fill"></i><br>
+            <input type="text" placeholder="Name" required><br>
+            <input type="text" placeholder="Surname" required><br>
+
+            <label for="birth-date" style="font-weight: bold;">Birth Date:</label><br>
+            <input type="date" id="birth-date" required><br>
+
+            <label for="security-question"><h4 style="font-weight: bold;">Security Question :</h4></label>
+            <select id="security-question" required>
+                <option value="">Select a question</option>
+                <option value="pet">What is the name of your first pet?</option>
+                <option value="school">What was the name of your elementary school?</option>
+                <option value="mother">What is your mother's maiden name?</option>
+                <option value="city">In which city were you born?</option>
+            </select><br>
+
+            <input type="text" placeholder="Security Answer" class="security-answer" required><br>
+            <br>
+            <button id="reg-btn" type="submit" class="register-btn">Register</button>
+        </form>
+    </div>
+    
+</body>
+</html>
