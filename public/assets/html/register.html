@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet" href="../css/register.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <script>
+        // Resim önizleme fonksiyonu
+        function loadImage(event) {
+            const preview = document.getElementById('profile-preview');
+            preview.src = URL.createObjectURL(event.target.files[0]);
+            preview.onload = () => {
+                URL.revokeObjectURL(preview.src);
+            };
+        }
+
+        // Form submit işlemi
+        function handleRegister(event) {
+    event.preventDefault();
+    const form = document.getElementById('registerForm');
+    const formData = new FormData(form);
+
+    fetch('/api/auth/register', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Kayıt işlemi sırasında bir hata oluştu.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.redirect) {
+            // Yönlendirme bilgisi varsa login ekranına git
+            window.location.href = data.redirect;
+        } else {
+            // Yönlendirme bilgisi yoksa kullanıcıya mesaj göster
+            alert(data.message || 'Kayıt işlemi tamamlandı.');
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+    });
+}
+
+    </script>
+</head>
+<body>
+    <div class="register-container">
+        <h1 style="font-family: 'Pacifico', cursive; text-align: center;">Register</h1>
+        <form id="registerForm" class="register-form" onsubmit="handleRegister(event)" enctype="multipart/form-data">
+            <label for="profile-pic" class="image-label">
+                <img id="profile-preview" src="../icons/avatar.png" alt="Resim Ekle" style="width: 80px; height: 80px;">
+            </label>
+            <input type="file" id="profile-pic" name="profile_pic" accept="image/*" onchange="loadImage(event)" required><br>
+
+            <input type="text" id="username" name="username" placeholder="Username" required><br>
+            <input type="email" id="email" name="email" placeholder="Email" required><br>
+            <input type="password" id="password" name="password" placeholder="Password" required><br>
+            <input type="text" id="name" name="name" placeholder="Name" required><br>
+            <input type="text" id="surname" name="surname" placeholder="Surname" required><br>
+
+            <label for="birth-date" style="font-weight: bold;">Birth Date:</label><br>
+            <input type="date" id="birth-date" name="birth_date" required><br>
+
+            <label for="security-question"><h4 style="font-weight: bold;">Security Question :</h4></label>
+            <select id="security-question" name="security_question" required>
+                <option value="">Select a question</option>
+                <option value="pet">What is the name of your first pet?</option>
+                <option value="school">What was the name of your elementary school?</option>
+                <option value="mother">What is your mother's maiden name?</option>
+                <option value="city">In which city were you born?</option>
+            </select><br>
+
+            <input type="text" id="security-answer" name="security_answer" placeholder="Security Answer" required><br><br>
+
+            <button id="reg-btn" type="submit" class="register-btn">Register</button>
+        </form>
+    </div>
+</body>
+</html>

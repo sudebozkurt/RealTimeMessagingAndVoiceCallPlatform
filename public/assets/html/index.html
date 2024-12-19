@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../css/index.css" />
+    <title>ChatApp</title>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-white d-flex justify-content-center align-items-center">
+        <a class="navbar-brand d-flex align-items-center" href="index.html">
+            <img src="../icons/chat.png" class="mr-2" style="width: 20px; height: 20px;">
+            ChatApp
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </nav>
+    
+
+<div class="container-fluid">
+    <div class="row no-gutters">
+        <div class="col-md-3 no-gutters">
+            <div class="leftside">
+                <div class="row no-gutters">
+                    <div class="col-2">
+                        <div class="icon">
+                            <a href="index.html"><i class="fa-solid fa-message"></i></a>
+                            <a href="#"><i class="fa-solid fa-phone"></i></a>
+                            <a href="#"><i class="fas fa-cog"></i></a>
+                            <a href="/logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+                        </div>
+                    </div>
+                    <div class="col-10">
+                        <div class="chat-list">
+                            <h2>Messages</h2>
+                            <div id="chatList"></div> <!-- Chat listesi buraya yüklenecek -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9 no-gutters">
+            <div class="rightside">
+                <div class="rightup">
+                    <div class="userinfo">
+                        <img src="../icons/avatar.png" alt="profile-pic" class="profile-img">
+                        <h2 id="user-name">Select a user to chat</h2>
+                    </div>
+                    <div class="chat-container">
+                        <div class="chat-box" id="chat-box">
+                            <!-- Mesajlar buraya yüklenecek -->
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Type a message">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="far fa-smile"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="far fa-file"></i>
+                                </button>
+                                <button class="btn btn-primary" type="button">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Kullanıcıları almak için API'yi çağırıyoruz
+fetch('/api/users/all-users')
+    .then(response => response.json())
+    .then(users => {
+        const chatListContainer = document.getElementById('chatList');
+        chatListContainer.innerHTML = ''; // Daha önceki listeyi temizle
+
+        if (users.length === 0) {
+            chatListContainer.innerHTML = '<p>No users available</p>';
+        }
+
+        users.forEach(user => {
+            const chatItem = document.createElement('div');
+            chatItem.classList.add('chat');
+            chatItem.setAttribute('data-user', user.username);
+            chatItem.onclick = function() {
+                showConversation(user.id, user.username); // Kullanıcı ID'sini de göndereceğiz
+            };
+
+            chatItem.innerHTML = `
+                <img src="${user.photo || '../img/profile_img.jpg'}" alt="profile-pic" class="profile-img">
+                <div>
+                    <p class="name"><a href="../profile.php?user=${user.username}">${user.name} ${user.surname}</a></p>
+                    <p class="preview">Last message here</p> <!-- Son mesajın önizlemesi -->
+                </div>
+            `;
+
+            chatListContainer.appendChild(chatItem);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching users:', error);
+    });
+
+    // Kullanıcı tıklandığında mesajları göster
+    function showConversation(userId, userName) {
+        document.getElementById('user-name').innerText = userName;
+        const chatBox = document.getElementById('chat-box');
+        chatBox.innerHTML = ''; // Mevcut mesajları temizle
+
+        // Mesajları almak için API'yi çağır
+        fetch(`/api/users/messages/${userId}`)
+            .then(response => response.json())
+            .then(messages => {
+                messages.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.classList.add('message');
+                    messageDiv.classList.add(message.sender_id === userId ? 'other-message' : 'user-message');
+                    messageDiv.textContent = message.content; // Mesaj içeriğini ekle
+                    chatBox.appendChild(messageDiv);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching messages:', error);
+            });
+    }
+</script>
+
+</body>
+</html>

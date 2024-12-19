@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/login.css">
+    <title>Login Sayfası</title>
+</head>
+<body>
+    <div class="login-container">
+        <h1 style="font-family: 'Pacifico', cursive;">Welcome</h1>
+        <form class="login-form" id="loginForm">
+            <div class="input-group">
+                <input type="text" id="username" name="username" placeholder="Username" required>
+                <i class="bi bi-person-circle"></i>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" name="password" placeholder="Password" required>
+                <i id="togglePassword" class="bi bi-eye-fill"></i>
+            </div>
+            <button type="submit" class="login-btn"><h3>Login</h3></button>
+        </form>
+        <br>
+        <div class="password-reminder">
+            <span>Don't you have an account?</span><br>
+            <button id="register-btn" class="link-btn">Register</button><br>
+            <span>Forgot password?</span><br>
+            <button class="link-btn reset-btn">Reset Password</button>
+        </div>
+    </div>
+
+    <script>
+        // Şifreyi göster veya gizle
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            togglePassword.classList.toggle('bi-eye-fill');
+            togglePassword.classList.toggle('bi-eye-slash-fill');
+        });
+
+        // Register butonuna tıklayınca yönlendirme yap
+        document.getElementById('register-btn').addEventListener('click', () => {
+            window.location.href = '/register'; // Hedef sayfa
+        });
+
+        // Login işlemini yönet
+        document.getElementById('loginForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                alert('Kullanıcı adı ve şifre gereklidir.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        alert('Başarılı giriş ancak yönlendirme URL\'si bulunamadı.');
+                    }
+                } else if (response.status === 401) {
+                    alert('Hatalı kullanıcı adı veya şifre.');
+                } else {
+                    alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+                }
+            } catch (error) {
+                console.error('Login hatası:', error);
+                alert('Sunucuya bağlanırken bir sorun oluştu.');
+            }
+        });
+    </script>
+</body>
+</html>
