@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Session = require('../models/Session');
 const User = require('../models/User');
+const authenticateUser = require('../../middlewares/authMiddleware'); // Yeni eklendi
 
+// Ana sayfa yönlendirme rotası
 router.get('/', async (req, res) => {
     try {
         const { sessionToken } = req.cookies;
@@ -58,4 +60,22 @@ router.get('/logout', async (req, res) => {
         return res.status(500).send('Logout işlemi sırasında bir hata oluştu.');
     }
 });
+
+// Public key alma rotası
+router.get('/users/publicKey', authenticateUser, async (req, res) => {
+    try {
+        const { userID } = req.query;
+        const user = await User.findByPk(userID);
+
+        if (!user) {
+            return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+        }
+
+        res.json({ publicKey: user.publicKey });
+    } catch (error) {
+        console.error('Public key alma hatası:', error);
+        res.status(500).json({ error: 'Public key alınamadı.' });
+    }
+});
+
 module.exports = router;

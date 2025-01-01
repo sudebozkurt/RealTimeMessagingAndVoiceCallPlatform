@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/index.css" />
-    <title>ChatApp</title>
+    <title>Admin Panel - ChatApp</title>
 </head>
 <body>
 
@@ -15,37 +15,110 @@
             <img src="../icons/chat.png" class="mr-2" style="width: 20px; height: 20px;">
             ChatApp
         </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
     </nav>
     
+    <div class="container-fluid">
+        <div class="row no-gutters">
+            <div class="col-md-3 no-gutters">
+                <div class="leftside">
+                    <div class="row no-gutters">
+                        <div class="col-2">
+                            <div class="icon">
+                                <a href="index.html"><i class="fa-solid fa-message"></i></a>
+                                <a href="#"><i class="fas fa-cog"></i></a>
+                                <a href="/logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<div class="container-fluid">
-    <div class="row no-gutters">
-        <div class="col-md-3 no-gutters">
-            <div class="leftside">
-                <div class="row no-gutters">
-                    <div class="col-2">
-                        <div class="icon">
-                            <a href="index.html"><i class="fa-solid fa-message"></i></a>
-                            <a href="#"><i class="fas fa-cog"></i></a>
-                            <a href="/logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+            <div class="col-md-9 no-gutters">
+                <div class="rightside">
+                    <div class="chat-container mt-4 text-left">
+                        <div class="chat-box" id="chat-box" style="height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
+                            <!-- Mesajlar buraya yüklenecek -->
+                        </div>
+                        <div class="input-group mt-3 justify-content-center">
+                            <input type="text" class="form-control w-50" id="chat-input" placeholder="Type a message">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" id="send-button" type="button">
+                                    <i class="far fa-paper-plane"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-9 no-gutters">
-            <div class="rightside">
-                <div class="rightup">
-                    <!--Buraya yazma ekranı gelecek-->
-                </div>
-            </div>
-        </div>
     </div>
-</div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const chatBox = document.getElementById('chat-box');
+
+            try {
+                const response = await fetch('/api/broadcastMessages');
+                const messages = await response.json();
+
+                messages.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.innerHTML = `<strong>Admin:</strong> ${message.message}`;
+                    messageDiv.style.textAlign = "left";
+                    chatBox.appendChild(messageDiv);
+                });
+            } catch (error) {
+                console.error('Mesajlar yüklenirken hata oluştu:', error);
+            }
+        });
+
+        // Send button click event
+        document.getElementById('send-button').addEventListener('click', async () => {
+            sendMessage();
+        });
+
+        // Enter tuşuna basıldığında mesaj gönder
+        document.getElementById('chat-input').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();  // Enter tuşunun formu göndermesini engelle
+                sendMessage();
+            }
+        });
+
+        // Mesaj gönderme fonksiyonu
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const messageContent = input.value.trim();
+
+            if (!messageContent) {
+                alert('Lütfen bir mesaj yazın.');
+                return;
+            }
+
+            console.log('Gönderilen mesaj:', messageContent); 
+
+            // Mesajı Socket.IO ile yayınla
+            socket.emit('broadcastMessage', {
+                senderID: 1, // Admin kullanıcı ID'si
+                content: messageContent, // Mesajın kendisi
+            });
+
+            input.value = ''; // Mesaj kutusunu temizle
+        }
+
+        // Broadcast mesaj alındığında mesaj kutusuna ekle
+        socket.on('receiveBroadcast', (message) => {
+            console.log('Alınan mesaj:', message); 
+            const chatBox = document.getElementById('chat-box');
+            const messageDiv = document.createElement('div');
+            messageDiv.innerHTML = `<strong>Admin:</strong> ${message.message}`;
+            messageDiv.style.textAlign = "left";
+            chatBox.appendChild(messageDiv);
+        });
+    </script>
 
 </body>
 </html>

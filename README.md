@@ -25,7 +25,7 @@ cd chatapp
 - Gerekli paketleri yükleyin:
   
 ```
-npm install [paket adı]
+npm install
 ```
 
 - Uygulamayı başlatın:

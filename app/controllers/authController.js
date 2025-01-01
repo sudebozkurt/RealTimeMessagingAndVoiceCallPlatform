@@ -4,7 +4,6 @@ const User = require('../models/User');
 const Session = require('../models/Session');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const { Op } = require('sequelize');
 
 // Kullanıcı kayıt işlemi
@@ -37,10 +36,9 @@ exports.registerUser = async (req, res) => {
         // Profil fotoğrafını kaydet
         let photoPath = null;
         if (profilePic) {
-            // Dosya ismini MD5 hash ile oluştur
-            const md5Hash = crypto.createHash('md5').update(profilePic.originalname + Date.now()).digest('hex');
+            // Dosya ismini hash olmadan kaydet
             const fileExtension = path.extname(profilePic.originalname); // Dosya uzantısı
-            const hashedFileName = `${md5Hash}${fileExtension}`;
+            const hashedFileName = `${uuid}${fileExtension}`;
             const uploadPath = path.join(__dirname, '../../uploads/profilePhotos', hashedFileName);
 
             // Dosya dizini kontrol et ve yoksa oluştur
@@ -61,7 +59,7 @@ exports.registerUser = async (req, res) => {
             password: hashedPassword,
             email,
             role: 'user', // Varsayılan rol "user"
-            photo: photoPath, // Fotoğraf yolu (MD5 ile hashlenmiş)
+            photo: photoPath, // Fotoğraf yolu
             uuid,
             security_question,
             security_answer,
@@ -86,7 +84,6 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
-        const credentials = username; // frontend ile uyumlu hale getirmek için
         
         // Kullanıcıyı bul
         const user = await User.findOne({
