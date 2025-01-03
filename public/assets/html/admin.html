@@ -61,7 +61,7 @@
             const chatBox = document.getElementById('chat-box');
 
             try {
-                const response = await fetch('/api/broadcastMessages');
+                const response = await fetch('/api/broadcastMessages/');
                 const messages = await response.json();
 
                 messages.forEach(message => {
@@ -76,9 +76,19 @@
         });
 
         // Send button click event
-        document.getElementById('send-button').addEventListener('click', async () => {
-            sendMessage();
+        document.getElementById('send-button').addEventListener('click', () => {
+            const input = document.getElementById('chat-input');
+            const messageContent = input.value.trim();
+
+            if (messageContent) {
+                socket.emit('broadcastMessage', {
+                    senderID: 1, // Admin kullanıcı ID'si
+                    content: messageContent,
+                });
+                input.value = ''; // Mesaj kutusunu temizle
+            }
         });
+
 
         // Enter tuşuna basıldığında mesaj gönder
         document.getElementById('chat-input').addEventListener('keydown', (event) => {

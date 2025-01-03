@@ -1,9 +1,9 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../../config/dbConfig'); // Doğru yolu kullanın
+const sequelize = require('../../config/dbConfig'); // Doğru yolu kullandığınızdan emin olun
 
 const Session = sequelize.define('Session', {
   UUID: {
-    type: DataTypes.STRING,
+    type: DataTypes.CHAR(36),  // UUID genellikle 36 karakter uzunluğunda
     allowNull: false,
     primaryKey: true,
   },

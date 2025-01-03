@@ -2,9 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Session = require('../models/Session');
 const User = require('../models/User');
-const authenticateUser = require('../../middlewares/authMiddleware'); // Yeni eklendi
 
-// Ana sayfa yönlendirme rotası
 router.get('/', async (req, res) => {
     try {
         const { sessionToken } = req.cookies;
@@ -19,6 +17,11 @@ router.get('/', async (req, res) => {
 
         if (!session) {
             return res.redirect('/login'); // Geçersiz token
+        }
+
+        // Session'ın geçerliliğini kontrol et
+        if (new Date() > new Date(session.expires_at)) {
+            return res.redirect('/login'); // Token süresi dolmuş
         }
 
         // Kullanıcı bilgilerini al
@@ -52,29 +55,18 @@ router.get('/logout', async (req, res) => {
             await Session.destroy({ where: { token: sessionToken } });
         }
 
-        // Çerezi temizle ve giriş sayfasına yönlendir
-        res.clearCookie('sessionToken');
+        // Çerezi temizle
+        res.clearCookie('sessionToken', {
+            httpOnly: true, // Çerez sadece sunucuya erişilebilir
+            secure: process.env.NODE_ENV === 'production', // HTTPS üzerinden çalışacak
+            sameSite: 'Strict', // Aynı site üzerinde çalışmasını zorunlu kılar
+        });
+        
+        // Giriş sayfasına yönlendir
         return res.redirect('/login');
     } catch (error) {
         console.error('Logout işlemi sırasında bir hata oluştu:', error);
         return res.status(500).send('Logout işlemi sırasında bir hata oluştu.');
-    }
-});
-
-// Public key alma rotası
-router.get('/users/publicKey', authenticateUser, async (req, res) => {
-    try {
-        const { userID } = req.query;
-        const user = await User.findByPk(userID);
-
-        if (!user) {
-            return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
-        }
-
-        res.json({ publicKey: user.publicKey });
-    } catch (error) {
-        console.error('Public key alma hatası:', error);
-        res.status(500).json({ error: 'Public key alınamadı.' });
     }
 });
 

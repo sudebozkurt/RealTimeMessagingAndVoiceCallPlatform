@@ -1,7 +1,6 @@
 const Session = require('../app/models/Session');
 const User = require('../app/models/User');
 
-
 const authenticateUser = async (req, res, next) => {
     try {
         const { sessionToken } = req.cookies;
@@ -11,7 +10,7 @@ const authenticateUser = async (req, res, next) => {
             return res.redirect('/login');
         }
 
-        // Session veritabanında token kontrolü
+        // Session tablosunda token'ı kontrol et
         const session = await Session.findOne({ where: { token: sessionToken } });
 
         if (!session) {

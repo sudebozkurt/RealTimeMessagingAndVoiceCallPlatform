@@ -22,9 +22,16 @@ exports.getBroadcastMessages = async (req, res) => {
         const messages = await BroadcastMessage.findAll({
             order: [['date', 'ASC']],
         });
-        res.json(messages);
+
+        if (!res.headersSent) {
+            return res.status(200).json(messages); // Tek yanıt gönder
+        }
     } catch (error) {
-        console.error('Mesajları alırken hata:', error);
-        res.status(500).send('Mesajları alırken hata oluştu.');
+        console.error('Mesajları alırken hata oluştu:', error);
+        if (!res.headersSent) {
+            res.status(500).send('Mesajları alırken hata oluştu.');
+        }
     }
 };
+
+

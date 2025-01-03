@@ -2,70 +2,66 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const User = require('../models/User');
 const Session = require('../models/Session');
+const LoginRegisterLog = require('../models/LoginRegisterLog')
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { Op } = require('sequelize');
+//require('dotenv').config();
 
-// Kullanıcı kayıt işlemi
+
 exports.registerUser = async (req, res) => {
     try {
         const { name, surname, username, password, email, security_question, security_answer } = req.body;
-        const profilePic = req.file; // Yüklenen fotoğraf dosyası
+        const profilePic = req.file;
 
-        // Tüm alanlar doldurulmuş mu kontrol et
         if (!name || !surname || !username || !password || !email || !security_question || !security_answer) {
             return res.status(400).json({ message: 'Tüm alanları doldurmanız gerekmektedir.' });
         }
 
-        // Kullanıcı adı veya e-posta zaten kayıtlı mı kontrol et
-        const existingUser = await User.findOne({ where: { username } });
-        const existingEmail = await User.findOne({ where: { email } });
-        if (existingUser) {
-            return res.status(400).json({ message: 'Bu kullanıcı adı zaten alınmış.' });
-        }
-        if (existingEmail) {
-            return res.status(400).json({ message: 'Bu e-posta adresi zaten kayıtlı.' });
+        const [existingUser, existingEmail] = await Promise.all([
+            User.findOne({ where: { username } }),
+            User.findOne({ where: { email } }),
+        ]);
+
+        if (existingUser || existingEmail) {
+            await logOperation(null, 'register', 'failure', req.ip);
+            return res.status(400).json({ message: 'Kullanıcı adı veya e-posta zaten kayıtlı.' });
         }
 
-        // Şifreyi hash'le
         const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedSecurityAnswer = await bcrypt.hash(security_answer, 10);
 
-        // UUID oluştur
-        const uuid = uuidv4();
-
-        // Profil fotoğrafını kaydet
         let photoPath = null;
         if (profilePic) {
-            // Dosya ismini hash olmadan kaydet
-            const fileExtension = path.extname(profilePic.originalname); // Dosya uzantısı
-            const hashedFileName = `${uuid}${fileExtension}`;
+            const md5Hash = crypto.createHash('md5').update(profilePic.originalname + Date.now()).digest('hex');
+            const fileExtension = path.extname(profilePic.originalname);
+            const hashedFileName = `${md5Hash}${fileExtension}`;
             const uploadPath = path.join(__dirname, '../../uploads/profilePhotos', hashedFileName);
 
-            // Dosya dizini kontrol et ve yoksa oluştur
-            const directoryPath = path.join(__dirname, '../../uploads/profilePhotos');
-            if (!fs.existsSync(directoryPath)) {
-                fs.mkdirSync(directoryPath, { recursive: true });
+            if (!fs.existsSync(path.join(__dirname, '../../uploads/profilePhotos'))) {
+                fs.mkdirSync(path.join(__dirname, '../../uploads/profilePhotos'), { recursive: true });
             }
 
-            fs.writeFileSync(uploadPath, profilePic.buffer); // Fotoğrafı kaydet
-            photoPath = `/uploads/profilePhotos/${hashedFileName}`; // Fotoğraf yolunu belirle
+            fs.writeFileSync(uploadPath, profilePic.buffer);
+            photoPath = `/uploads/profilePhotos/${hashedFileName}`;
         }
 
-        // Yeni kullanıcı oluştur
         const newUser = await User.create({
             name,
             surname,
             username,
             password: hashedPassword,
             email,
-            role: 'user', // Varsayılan rol "user"
-            photo: photoPath, // Fotoğraf yolu
-            uuid,
+            role: 'user',
+            photo: photoPath,
+            uuid: uuidv4(),
             security_question,
-            security_answer,
+            security_answer: hashedSecurityAnswer,
         });
 
-        // Başarı yanıtı döndür
+        await logOperation(newUser.id, 'register', 'success', req.ip);
+
         res.status(201).json({
             redirect: '/login',
             user: {
@@ -76,40 +72,38 @@ exports.registerUser = async (req, res) => {
             },
         });
     } catch (error) {
+        await logOperation(null, 'register', 'failure', req.ip);
         console.error('Kayıt hatası:', error);
         res.status(500).json({ message: 'Sunucu hatası. Lütfen tekrar deneyiniz.' });
     }
 };
 
+
+
 exports.loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
-        
-        // Kullanıcıyı bul
+
         const user = await User.findOne({
             where: {
-                [Op.or]: [
-                    { username: username },
-                ],
+                [Op.or]: [{ username }],
             },
         });
 
-        // Kullanıcı bulunamadıysa hata döndür
         if (!user) {
-            return res.status(401).json({ message: 'Geçersiz kullanıcı adı veya e-posta' });
+            await logOperation(null, 'login', 'failure', req.ip); // Başarısız giriş loglanır
+            return res.status(401).json({ message: 'Geçersiz kullanıcı adı veya şifre' });
         }
 
-        // Şifre doğrulama
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Geçersiz şifre' });
+            await logOperation(user.id, 'login', 'failure', req.ip); // Başarısız giriş loglanır
+            return res.status(401).json({ message: 'Geçersiz giriş bilgileri' });
         }
 
-        // Session Token oluştur
         const sessionToken = uuidv4();
-        const sessionExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 saat geçerli
+        const sessionExpiry = new Date(Date.now() + (process.env.SESSION_EXPIRY || 60 * 60 * 1000));
 
-        // Session kaydı yap
         await Session.create({
             UUID: uuidv4(),
             userID: user.id,
@@ -117,21 +111,39 @@ exports.loginUser = async (req, res) => {
             expires_at: sessionExpiry,
         });
 
-        // Çereze token'ı ekle
         res.cookie('sessionToken', sessionToken, {
-            httpOnly: true, // Çerez sadece sunucudan erişilebilir
-            secure: process.env.NODE_ENV === 'production', // HTTPS üzerinde çalışır
-            maxAge: 60 * 60 * 1000, // 1 saat geçerli
+            httpOnly: false,
+            secure: false,
+            sameSite: 'Strict',
+            maxAge: process.env.SESSION_EXPIRY || 60 * 60 * 1000,
         });
 
-        // Kullanıcı rolüne göre yönlendir
-        if (user.role === 'admin') {
-            return res.status(200).json({ redirect: '/admin' });
-        } else {
-            return res.status(200).json({ redirect: '/index' });
-        }
+        await logOperation(user.id, 'login', 'success', req.ip); // Başarılı giriş loglanır
+
+        const redirectPath = user.role === 'admin' ? '/admin' : '/index';
+        return res.status(200).json({
+            redirect: redirectPath,
+            sessionToken,
+        });
     } catch (error) {
+        await logOperation(null, 'login', 'failure', req.ip); // Başarısız işlem loglanır
         console.error('Giriş hatası:', error);
         res.status(500).json({ message: 'Sunucu hatası. Lütfen tekrar deneyin.' });
     }
 };
+
+
+async function logOperation(user_id, operation, status, ip_address) {
+    try {
+        await LoginRegisterLog.create({
+            user_id,
+            operation,
+            status,
+            ip_address,
+        });
+        console.log(`Log kaydedildi: ${operation} (${status})`);
+    } catch (error) {
+        console.error('Loglama hatası:', error);
+    }
+}
+
