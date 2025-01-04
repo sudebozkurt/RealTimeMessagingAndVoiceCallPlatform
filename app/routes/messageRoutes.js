@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize'); // Sequelize operator'ü
-const { sendMessage, getMessages, getLastMessages } = require('../controllers/messageController');
+const { sendMessage, getMessages, getLastMessages, updateMessageStatus } = require('../controllers/messageController');
 const authenticateUser = require('../../middlewares/authMiddleware'); // Middleware'ı import et
 const Message = require('../models/Messages'); // Message modelini import et
 
@@ -77,6 +77,8 @@ router.get('/last-messages/:userId', authenticateUser, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch last messages' });
     }
 });
+
+router.post('/update-status', authenticateUser, updateMessageStatus);
 
 
 

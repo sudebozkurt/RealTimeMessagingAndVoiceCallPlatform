@@ -1,5 +1,3 @@
-CREATE DATABASE IF NOT EXISTS chatapp_db;
-USE chatapp_db;
 -- Veritabanını oluştur
 CREATE DATABASE IF NOT EXISTS chatapp_db;
 USE chatapp_db;

@@ -67,11 +67,15 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        let userId = null;
+        let contactID = null;
+        const socket = io('http://localhost:5000');
+
         // Helper function to get cookies
         function getCookie(name) {
-            const cookies = document.cookie.split("; ");
+            const cookies = document.cookie.split('; ');
             for (let cookie of cookies) {
-                const [key, value] = cookie.split("=");
+                const [key, value] = cookie.split('=');
                 if (key === name) {
                     return value;
                 }
@@ -79,77 +83,8 @@
             return null;
         }
 
-        function loadUserList(page = 1) {
-            // API'den kullanıcı listesini yükle
-            fetch(`/api/users/all-users?page=${page}&limit=${itemsPerPage}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    const users = data.users; // Gelen kullanıcı listesi
-                    const chatList = document.getElementById('chatList');
-                    const paginationContainer = document.getElementById('paginationContainer');
-
-                    // Listeyi temizle
-                    chatList.innerHTML = '';
-                    paginationContainer.innerHTML = '';
-
-                    if (!users || users.length === 0) {
-                        chatList.innerHTML = '<p>No users found</p>';
-                        return;
-                    }
-
-                    // Kullanıcıları listele
-                    users.forEach(user => {
-                        const chatItem = document.createElement('div');
-                        chatItem.classList.add('chat-item', 'p-2', 'border-bottom');
-                        chatItem.onclick = () => showConversation(user.id, `${user.name} ${user.surname}`, user.photo);
-
-                        chatItem.innerHTML = `
-                            <img src="${user.photo || '../img/profile_img.jpg'}" class="rounded-circle mr-2" style="width: 40px; height: 40px;">
-                            <div>
-                                <p class="mb-0 font-weight-bold">${user.name} ${user.surname}</p>
-                                <p class="text-muted small">${user.lastMessage || 'No messages yet'}</p>
-                            </div>
-                        `;
-
-                        chatList.appendChild(chatItem);
-                    });
-
-                    // Sayfalama düğmelerini oluştur
-                    const totalPages = data.totalPages;
-                    for (let i = 1; i <= totalPages; i++) {
-                        const pageButton = document.createElement('button');
-                        pageButton.classList.add('btn', 'btn-outline-primary', 'm-1');
-                        pageButton.innerText = i;
-                        if (i === page) {
-                            pageButton.classList.add('active'); // Mevcut sayfayı vurgula
-                        }
-                        pageButton.onclick = () => {
-                            currentPage = i;
-                            loadUserList(i); // Yeni sayfayı yükle
-                        };
-                        paginationContainer.appendChild(pageButton);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching user list:', error);
-                    const chatList = document.getElementById('chatList');
-                    chatList.innerHTML = '<p>Error loading users. Please try again later.</p>';
-                });
-        }
-    
-        let userId = null;
-        let contactID = null;
-        let currentPage = 1; // Başlangıç sayfası
-        const itemsPerPage = 6; // Sayfa başına gösterilecek kullanıcı sayısı
-
-
         // Fetch session user
-        const sessionToken = getCookie("sessionToken");
+        const sessionToken = getCookie('sessionToken');
         fetch('/api/session/getUserFromSession', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -164,192 +99,190 @@
         })
         .catch(error => console.error('Session fetch error:', error));
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadUserList();
-        });
+        // Load user list
+        document.addEventListener('DOMContentLoaded', loadUserList);
 
-    
-        // Show conversation and messages
-        function showConversation(selectedContactID, userName, userPhoto) {
-            contactID = selectedContactID;
-            document.getElementById('user-name').innerText = userName;
-            document.getElementById('profile-pic').src = userPhoto || '../img/profile.jpg';
-            document.getElementById('messageInput').disabled = false;
-            document.getElementById('sendButton').disabled = false;
+        function loadUserList(page = 1) {
+            const itemsPerPage = 6; // Sayfa başına öğe sayısı
+            if (isNaN(page) || page < 1) page = 1; // Geçersiz sayfa değerini kontrol et
 
-            // Admin kullanıcı için mesaj kutusunu devre dışı bırak
-            if (selectedContactID === 6) { // Admin ID kontrolü
-                messageInput.disabled = true;
-                sendButton.disabled = true;
-                messageInput.placeholder = "Admin ile mesajlaşma devre dışı bırakıldı.";
-            } else {
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                messageInput.placeholder = "Type a message";
-            }
-    
-            fetch(`/api/messages/history/${userId}/${contactID}`)
-            .then(response => response.json())
-            .then(messages => {
-                const chatBox = document.getElementById('chat-box');
-                chatBox.innerHTML = '';
-                messages.forEach(msg => {
-                    const messageDiv = document.createElement('div');
-                    messageDiv.classList.add(msg.senderID === userId ? 'message-sent' : 'message-received');
-                    messageDiv.innerText = msg.message;
-                    chatBox.appendChild(messageDiv);
-                });
-                chatBox.scrollTop = chatBox.scrollHeight;
-            });
-        }
-    
-        // Initialize Socket.IO
-        const socket = io('http://localhost:5000');
-    
-        // Register user ID with socket
-        socket.on('connect', () => {
-            if (userId) {
-                socket.emit('register-user', userId);
-            }
-        });
-    
-        // Send button functionality
-        document.getElementById('sendButton').addEventListener('click', () => {
-            const messageInput = document.getElementById('messageInput');
-            const message = messageInput.value.trim();
-
-            if (message && contactID) {
-                const data = { senderID: userId, receiverID: contactID, message, type: 'text' };
-                socket.emit('send-message', data);
-
-                // Add sent message to chat
-                const chatBox = document.getElementById('chat-box');
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message-sent');
-                messageDiv.innerText = message;
-                chatBox.appendChild(messageDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
-
-                messageInput.value = '';
-            }
-        });
-
-        // Enter tuşuyla mesaj gönderme
-        document.getElementById('messageInput').addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault(); // Sayfanın yenilenmesini önler
-                document.getElementById('sendButton').click(); // Send butonunu tetikler
-            }
-        });
-
-    
-        // Receive messages
-        socket.on('receive-message', (message) => {
-            if (message.senderID === contactID || message.receiverID === userId) {
-                const chatBox = document.getElementById('chat-box');
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add(message.senderID === userId ? 'message-sent' : 'message-received');
-                messageDiv.innerText = message.message;
-                chatBox.appendChild(messageDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-        });
-
-        document.getElementById('searchInput').addEventListener('input', (event) => {
-        const searchTerm = event.target.value.toLowerCase();
-        const chatItems = document.querySelectorAll('.chat-item');
-
-        chatItems.forEach(chatItem => {
-            const userName = chatItem.querySelector('.font-weight-bold').innerText.toLowerCase();
-            if (userName.includes(searchTerm)) {
-                chatItem.style.display = 'flex'; // Görünür yap
-            } else {
-                chatItem.style.display = 'none'; // Gizle
-            }
-        });
-    });
-
-        document.getElementById('searchInput').addEventListener('input', (event) => {
-        const searchTerm = event.target.value.toLowerCase();
-        const chatItems = document.querySelectorAll('.chat-item');
-
-        chatItems.forEach(chatItem => {
-            const userName = chatItem.querySelector('.font-weight-bold').innerText.toLowerCase();
-            if (userName.includes(searchTerm)) {
-                chatItem.style.display = 'flex'; // Görünür yap
-            } else {
-                chatItem.style.display = 'none'; // Gizle
-            }
-        });
-    });
-
-    function showConversation(selectedContactID, userName, userPhoto) {
-        contactID = selectedContactID;
-        document.getElementById('user-name').innerText = userName;
-        document.getElementById('profile-pic').src = userPhoto || '../img/profile.jpg';
-
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const chatBox = document.getElementById('chat-box');
-        
-        if (selectedContactID === 6) { // Admin ID kontrolü
-            messageInput.disabled = true;
-            sendButton.disabled = true;
-            messageInput.placeholder = "Admin ile mesajlaşma devre dışı bırakıldı.";
-
-            // Broadcast mesajları getir
-            fetch(`/api/broadcastMessages`)
-                .then(response => response.json())
-                .then(messages => {
-                    chatBox.innerHTML = '';
-                    messages.forEach(msg => {
-                        const messageDiv = document.createElement('div');
-                        messageDiv.classList.add('message-received');
-                        messageDiv.innerText = msg.message;
-                        chatBox.appendChild(messageDiv);
-                    });
-                    chatBox.scrollTop = chatBox.scrollHeight;
+            fetch(`/api/users/all-users?page=${page}&limit=${itemsPerPage}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
                 })
-                .catch(error => {
-                    console.error('Broadcast mesajları yüklenirken hata oluştu:', error);
-                });
-        } else {
-            messageInput.disabled = false;
-            sendButton.disabled = false;
-            messageInput.placeholder = "Type a message";
+                .then(data => {
+                    const chatList = document.getElementById('chatList');
+                    chatList.innerHTML = '';
+                    const paginationContainer = document.getElementById('paginationContainer');
+                    paginationContainer.innerHTML = '';
 
-            // Kullanıcı mesajlarını getir
-            fetch(`/api/messages/history/${userId}/${contactID}`)
+                    if (!data.users || data.users.length === 0) {
+                        chatList.innerHTML = '<p>No users found</p>';
+                        return;
+                    }
+
+                    // Kullanıcıları listele
+                    data.users.forEach(user => {
+                        const chatItem = document.createElement('div');
+                        chatItem.classList.add('chat-item', 'p-2', 'border-bottom');
+                        chatItem.innerHTML = `
+                            <img src="${user.photo || '../img/profile_img.jpg'}" class="rounded-circle mr-2" style="width: 40px; height: 40px;">
+                            <div>
+                                <p class="mb-0 font-weight-bold">${user.name} ${user.surname}</p>
+                                <p class="text-muted small">${user.lastMessage || 'No messages yet'}</p>
+                            </div>
+                        `;
+                        chatItem.onclick = () => showConversation(user.id, `${user.name} ${user.surname}`, user.photo);
+                        chatList.appendChild(chatItem);
+                    });
+
+                    // Sayfalama düğmelerini oluştur
+                    const totalPages = data.totalPages;
+                    for (let i = 1; i <= totalPages; i++) {
+                        const pageButton = document.createElement('button');
+                        pageButton.classList.add('btn', 'btn-outline-primary', 'm-1');
+                        pageButton.innerText = i;
+                        if (i === page) {
+                            pageButton.classList.add('active');
+                        }
+                        pageButton.onclick = () => loadUserList(i);
+                        paginationContainer.appendChild(pageButton);
+                    }
+                })
+                .catch(error => console.error('Error fetching users:', error));
+        }
+
+
+        function showConversation(contactId, userName, userPhoto) {
+            contactID = contactId; // Seçilen kullanıcıyı kaydet
+            document.getElementById('user-name').innerText = userName;
+            document.getElementById('profile-pic').src = userPhoto || '../img/profile_img.jpg';
+            
+            // Backend'e aktif sohbet event'i gönder
+            socket.emit('active-chat', { userId, contactId });
+            loadMessages(contactId); // Mesajları yükle
+        }
+
+
+
+
+       // Mesajları yükle
+        function loadMessages(contactId) {
+            fetch(`/api/messages/history/${userId}/${contactId}`)
                 .then(response => response.json())
                 .then(messages => {
+                    const chatBox = document.getElementById('chat-box');
                     chatBox.innerHTML = '';
                     messages.forEach(msg => {
                         const messageDiv = document.createElement('div');
                         messageDiv.classList.add(msg.senderID === userId ? 'message-sent' : 'message-received');
-                        messageDiv.innerText = msg.message;
+
+                        let statusIcon = '';
+                        if (msg.status === 'sent') {
+                            statusIcon = '<img src="../icons/send.png" alt="Sent" class="status-icon">';
+                        } else if (msg.status === 'delivered') {
+                            statusIcon = '<img src="../icons/delivered.png" alt="Delivered" class="status-icon">';
+                        } else if (msg.status === 'read') {
+                            statusIcon = '<img src="../icons/read.png" alt="Read" class="status-icon">';
+                        }
+
+                        messageDiv.innerHTML = `
+                            <span>${msg.message}</span>
+                            ${msg.senderID === userId ? statusIcon : ''}
+                        `;
+                        messageDiv.setAttribute('data-id', msg.ID); // Mesaj ID'sini sakla
                         chatBox.appendChild(messageDiv);
                     });
                     chatBox.scrollTop = chatBox.scrollHeight;
-                })
-                .catch(error => console.error('Mesajlar yüklenirken hata oluştu:', error));
+                });
         }
-    }
 
-    // Broadcast mesajları dinle
-    socket.on('receiveBroadcast', (message) => {
-        if (contactID === 6) { // Sadece Admin (broadcast) mesajları açıkken
+        // Mesaj kutusunda kaydırma olduğunda `read` durumunu güncelle
+        document.getElementById('chat-box').addEventListener('scroll', () => {
+            const chatBox = document.getElementById('chat-box');
+            if (chatBox.scrollTop + chatBox.clientHeight >= chatBox.scrollHeight) {
+                const unreadMessages = chatBox.querySelectorAll('.message-received:not(.read)');
+                unreadMessages.forEach(message => {
+                    const messageId = message.getAttribute('data-id');
+                    if (messageId) {
+                        socket.emit('read-message', { messageId });
+                        message.classList.add('read');
+                    }
+                });
+            }
+        });
+
+
+
+        document.getElementById('sendButton').addEventListener('click', () => {
+            const messageInput = document.getElementById('messageInput');
+            const messageContent = messageInput.value.trim();
+            if (messageContent) {
+                const newMessageDiv = document.createElement('div');
+                newMessageDiv.classList.add('message-sent');
+                newMessageDiv.innerHTML = `
+                    <span>${messageContent}</span>
+                    <img src="../icons/send.png" alt="Sent" class="status-icon">
+                `;
+                const chatBox = document.getElementById('chat-box');
+                chatBox.appendChild(newMessageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                socket.emit('send-message', {
+                    senderID: userId,
+                    receiverID: contactID,
+                    message: messageContent,
+                    type: 'text',
+                });
+                messageInput.value = '';
+            }
+        });
+
+        // Kullanıcı giriş yaptığında socket'e kaydedilir
+        socket.on('connect', () => {
+            if (userId) {
+                socket.emit('register-user', userId);
+                console.log(`Kullanıcı ${userId} socket'e kaydedildi.`);
+            }
+        });
+
+
+        socket.on('receive-message', (message) => {
             const chatBox = document.getElementById('chat-box');
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message-received');
-            messageDiv.innerText = message.message;
+            messageDiv.innerHTML = `
+                <span>${message.message}</span>
+            `;
+            messageDiv.setAttribute('data-id', message.ID); // Mesaj ID'si burada atanıyor
             chatBox.appendChild(messageDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
-        }
-    });
 
+            if (message.ID) {
+                socket.emit('message-delivered', { messageId: message.ID });
+                socket.emit('readMessage', { messageId: message.ID });
+            } else {
+                console.error('Frontend: Mesaj ID eksik!');
+            }
+        });
 
+        socket.on('message-read-confirmation', (data) => {
+            const messageElement = document.querySelector(`[data-id="${data.messageId}"]`);
+            if (messageElement) {
+                messageElement.classList.add('read'); // CSS ile güncelle
+            }
+        });
+
+        const activeChats = {}; // Kullanıcıların aktif sohbet ID'lerini saklar
+
+        socket.on('active-chat', (data) => {
+            const { userId, contactId } = data;
+            activeChats[userId] = contactId;
+        });
 
     </script>
-     
 </body>
 </html>

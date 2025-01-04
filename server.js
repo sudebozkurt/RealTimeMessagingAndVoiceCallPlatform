@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const sequelize = require('./config/dbConfig');
 const { port } = require('./config/serverConfig');
+const cors = require('cors');
 
 // Rota ve middleware modülleri
 const authRoutes = require('./app/routes/authRoutes');
@@ -17,12 +18,23 @@ const authenticateUser = require('./middlewares/authMiddleware');
 const sessionRoutes = require('./app/routes/sessionRoutes');
 const broadcastRoutes = require('./app/routes/broadcastmessageRoutes');
 
+// CORS ayarlarını tanımlayın
+const corsOptions = {
+    origin: '*', // Tüm domainlere izin ver
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // İzin verilen HTTP metotları
+    allowedHeaders: ['Content-Type', 'Authorization'], // İzin verilen header'lar
+};
 // WebSocket modülleri
 const handleMessagingSockets = require('./app/sockets/messageSocket');
 // Sunucu ve socket.io yapılandırması
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST'],
+    },
+});
 
 // Middleware'ler
 app.use(bodyParser.json());
@@ -30,6 +42,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '/public/assets')));
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 app.use(cookieParser());
+app.use(cors(corsOptions));
 
 // Rotalar
 app.use('/api/auth', authRoutes);
