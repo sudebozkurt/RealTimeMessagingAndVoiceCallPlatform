@@ -12,12 +12,12 @@ const sendMessage = async (req, res) => {
         // Gelen veriyi kontrol edin
         console.log('Request Body:', req.body);
 
-        // Şifreli mesajı kaydet
         const newMessage = await Message.create({
             senderID,
             receiverID,
             message,
             type,
+            status: 'sent',
         });
 
         console.log('Mesaj başarıyla gönderildi:', newMessage);
@@ -86,4 +86,25 @@ const getLastMessages = async (userId) => {
     }
 };
 
-module.exports = { sendMessage, getMessages, getLastMessages };
+// Mesaj durumu güncelleme
+const updateMessageStatus = async (req, res) => {
+    const { messageId, status } = req.body;
+
+    try {
+        const message = await Message.findByPk(messageId);
+        if (message) {
+            message.status = status;
+            await message.save();
+            res.status(200).json({ success: true, message });
+        } else {
+            res.status(404).json({ error: 'Mesaj bulunamadı.' });
+        }
+    } catch (error) {
+        console.error('Durum güncelleme hatası:', error);
+        res.status(500).json({ error: 'Durum güncellenemedi.' });
+    }
+};
+
+
+
+module.exports = { sendMessage, getMessages, getLastMessages, updateMessageStatus};

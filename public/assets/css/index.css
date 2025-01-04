@@ -197,4 +197,14 @@ body {
     width: auto; /* İçeriğe göre genişlik */
     max-width: 30%; /* Maksimum genişlik ayarı */
 }
+.status-icon {
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    vertical-align: middle;
+    z-index: 10; 
+    display: inline-block;
+}
+
+
 
