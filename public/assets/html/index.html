@@ -160,11 +160,27 @@
             contactID = contactId; // Seçilen kullanıcıyı kaydet
             document.getElementById('user-name').innerText = userName;
             document.getElementById('profile-pic').src = userPhoto || '../img/profile_img.jpg';
-            
+
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+
+            if (contactID === 1) {
+                // Admin kullanıcıya mesaj atılamaz
+                messageInput.disabled = true;
+                sendButton.disabled = true;
+                messageInput.placeholder = 'Admin kullanıcısına mesaj atılamaz';
+            } else {
+                // Normal kullanıcılar için mesaj gönderimi aktif
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                messageInput.placeholder = 'Type a message';
+            }
+
             // Backend'e aktif sohbet event'i gönder
             socket.emit('active-chat', { userId, contactId });
             loadMessages(contactId); // Mesajları yükle
         }
+
 
 
 
@@ -282,6 +298,43 @@
             const { userId, contactId } = data;
             activeChats[userId] = contactId;
         });
+
+        // Mesaj gönderme işlemini bir fonksiyona ayır
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const messageContent = messageInput.value.trim();
+            if (messageContent) {
+                const newMessageDiv = document.createElement('div');
+                newMessageDiv.classList.add('message-sent');
+                newMessageDiv.innerHTML = `
+                    <span>${messageContent}</span>
+                    <img src="../icons/send.png" alt="Sent" class="status-icon">
+                `;
+                const chatBox = document.getElementById('chat-box');
+                chatBox.appendChild(newMessageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                socket.emit('send-message', {
+                    senderID: userId,
+                    receiverID: contactID,
+                    message: messageContent,
+                    type: 'text',
+                });
+                messageInput.value = '';
+            }
+        }
+
+        // Gönder butonu için tıklama olayı
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+
+        // Enter tuşu ile mesaj gönderme
+        document.getElementById('messageInput').addEventListener('keyup', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) { // Shift + Enter ile yeni satır eklemeyi engellemek için
+                event.preventDefault(); // Sayfanın yeniden yüklenmesini engelle
+                sendMessage();
+            }
+        });
+
 
     </script>
 </body>
