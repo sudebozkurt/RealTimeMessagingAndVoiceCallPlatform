@@ -23,9 +23,9 @@
                     <div class="row no-gutters">
                         <div class="col-2">
                             <div class="icon">
-                                <a href="index.html"><i class="fa-solid fa-message"></i></a>
+                                <a href="/"><i class="fa-solid fa-message"></i></a>
                                 <a href="#"><i class="fa-solid fa-phone"></i></a>
-                                <a href="#"><i class="fas fa-cog"></i></a>
+                                <a href="/profileSettings"><i class="fas fa-cog"></i></a>
                                 <a href="/logout"><i class="fa-solid fa-right-from-bracket"></i></a>
                             </div>
                         </div>
@@ -114,52 +114,55 @@
                     return response.json();
                 })
                 .then(data => {
-                    const chatList = document.getElementById('chatList');
-                    chatList.innerHTML = '';
-                    const paginationContainer = document.getElementById('paginationContainer');
-                    paginationContainer.innerHTML = '';
+        const chatList = document.getElementById('chatList');
+        chatList.innerHTML = '';
+        const paginationContainer = document.getElementById('paginationContainer');
+        paginationContainer.innerHTML = '';
 
-                    if (!data.users || data.users.length === 0) {
-                        chatList.innerHTML = '<p>No users found</p>';
-                        return;
-                    }
-
-                    // Kullanıcıları listele
-                    data.users.forEach(user => {
-                        const chatItem = document.createElement('div');
-                        chatItem.classList.add('chat-item', 'p-2', 'border-bottom');
-                        chatItem.innerHTML = `
-                            <img src="${user.photo || '../img/profile_img.jpg'}" class="rounded-circle mr-2" style="width: 40px; height: 40px;">
-                            <div>
-                                <p class="mb-0 font-weight-bold">${user.name} ${user.surname}</p>
-                                <p class="text-muted small">${user.lastMessage || 'No messages yet'}</p>
-                            </div>
-                        `;
-                        chatItem.onclick = () => showConversation(user.id, `${user.name} ${user.surname}`, user.photo);
-                        chatList.appendChild(chatItem);
-                    });
-
-                    // Sayfalama düğmelerini oluştur
-                    const totalPages = data.totalPages;
-                    for (let i = 1; i <= totalPages; i++) {
-                        const pageButton = document.createElement('button');
-                        pageButton.classList.add('btn', 'btn-outline-primary', 'm-1');
-                        pageButton.innerText = i;
-                        if (i === page) {
-                            pageButton.classList.add('active');
-                        }
-                        pageButton.onclick = () => loadUserList(i);
-                        paginationContainer.appendChild(pageButton);
-                    }
-                })
-                .catch(error => console.error('Error fetching users:', error));
+        if (!data.users || data.users.length === 0) {
+            chatList.innerHTML = '<p>No users found</p>';
+            return;
         }
+
+        // Kullanıcıları listele
+        data.users.forEach(user => {
+            // Silinmiş kullanıcıları frontend'de gizlemek isterseniz
+            if (user.deleted_at) return;
+
+            const chatItem = document.createElement('div');
+            chatItem.classList.add('chat-item', 'p-2', 'border-bottom');
+            chatItem.innerHTML = `
+                <img src="${user.photo || '../icons/avatar.png'}" class="rounded-circle mr-2" style="width: 40px; height: 40px;">
+                <div>
+                    <p class="mb-0 font-weight-bold">${user.name} ${user.surname}</p>
+                    <p class="text-muted small">${user.lastMessage || 'No messages yet'}</p>
+                </div>
+            `;
+            chatItem.onclick = () => showConversation(user.id, `${user.name} ${user.surname}`, user.photo);
+            chatList.appendChild(chatItem);
+        });
+
+        // Sayfalama düğmelerini oluştur
+        const totalPages = data.totalPages;
+        for (let i = 1; i <= totalPages; i++) {
+            const pageButton = document.createElement('button');
+            pageButton.classList.add('btn', 'btn-outline-primary', 'm-1');
+            pageButton.innerText = i;
+            if (i === page) {
+                pageButton.classList.add('active');
+            }
+            pageButton.onclick = () => loadUserList(i);
+            paginationContainer.appendChild(pageButton);
+        }
+    })
+    .catch(error => console.error('Error fetching users:', error));
+    }
 
 
         function showConversation(contactId, userName, userPhoto) {
             contactID = contactId; // Seçilen kullanıcıyı kaydet
             document.getElementById('user-name').innerText = userName;
-            document.getElementById('profile-pic').src = userPhoto || '../img/profile_img.jpg';
+            document.getElementById('profile-pic').src = userPhoto || '../icons/avatar.png';
 
             const messageInput = document.getElementById('messageInput');
             const sendButton = document.getElementById('sendButton');

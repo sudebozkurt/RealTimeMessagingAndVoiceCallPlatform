@@ -3,7 +3,9 @@ const User = require('../models/User');
 const getAllUsers = async (req, res) => {
     try {
         const users = await User.findAll({
-            attributes: ['id', 'username', 'name', 'surname', 'photo'], // Geri döndürülecek sütunlar
+            where: { deleted_at: null }, // Sadece silinmemiş kullanıcıları getir
+            attributes: ['id', 'username', 'name', 'surname', 'photo'],
+            order: [['created_at', 'DESC']],
         });
         res.status(200).json(users);
     } catch (error) {
@@ -11,5 +13,7 @@ const getAllUsers = async (req, res) => {
         res.status(500).json({ message: 'Kullanıcılar alınamadı.' });
     }
 };
+
+
 
 module.exports = { getAllUsers };

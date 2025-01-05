@@ -17,6 +17,7 @@ const userRoutes = require('./app/routes/userRoutes');
 const authenticateUser = require('./middlewares/authMiddleware');
 const sessionRoutes = require('./app/routes/sessionRoutes');
 const broadcastRoutes = require('./app/routes/broadcastmessageRoutes');
+const profileRoutes = require('./app/routes/profileRoutes');
 
 // CORS ayarlarını tanımlayın
 const corsOptions = {
@@ -50,13 +51,17 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/session', sessionRoutes);
 app.use('/api/broadcastMessages', broadcastRoutes);
+app.use('/api/profile', profileRoutes);
+
 
 // HTML sayfalarına yönlendirme
 app.get('/register', (req, res) => res.sendFile(path.join(__dirname, '/public/assets/html/register.html')));
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '/public/assets/html/login.html')));
 app.get('/index', authenticateUser, (req, res) => res.sendFile(path.join(__dirname, '/public/assets/html/index.html')));
 app.get('/admin', authenticateUser, (req, res) => res.sendFile(path.join(__dirname, '/public/assets/html/admin.html')));
-app.get('/testWebSocket', (req, res) => res.sendFile(path.join(__dirname, '/public/assets/html/testWebSocket.html')));
+app.get('/profileSettings', authenticateUser, (req, res) => {
+    res.sendFile(path.join(__dirname, '/public/assets/html/profileSettings.html'));
+});
 
 // Ana index rotası
 app.use('/', indexRoutes);
