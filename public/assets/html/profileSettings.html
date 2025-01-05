@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/profileSettings.css">
+    <title>Profil Yönetimi</title>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-auto sidebar">
+                <div class="sidebar-header">
+                </div>
+                <ul class="sidebar-menu">
+                    <li>
+                        <a href="/">
+                            <i class="fa-solid fa-message"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fa-solid fa-phone"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/profileSettings">
+                            <i class="fas fa-cog"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/logout">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Content -->
+            <div class="col mt-5">
+                <h2 class="text-center mb-4">Profil Yönetimi</h2>
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h4>Kullanıcı Bilgileri</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Profil Fotoğrafı -->
+                        <div class="text-center mb-4">
+                            <img id="profilePhoto" src="../icons/avatar.png" alt="Profil Fotoğrafı" class="rounded-circle" style="width: 120px; height: 120px;">
+                            <button id="changePhotoBtn" class="btn btn-outline-primary mt-3">Profil Fotoğrafı Değiştir</button>
+                            <input type="file" id="photoInput" accept="image/*" style="display: none;">
+                        </div>
+
+                        <!-- Profil Bilgileri -->
+                        <form id="profileForm">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Ad</label>
+                                <input type="text" class="form-control" id="name" placeholder="Adınızı girin" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="surname" class="form-label">Soyad</label>
+                                <input type="text" class="form-control" id="surname" placeholder="Soyadınızı girin" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">E-posta</label>
+                                <input type="email" class="form-control" id="email" placeholder="E-posta adresinizi girin" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Profil Bilgilerini Güncelle</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Şifre Değiştirme -->
+                <div class="card mt-4">
+                    <div class="card-header text-center">
+                        <h4>Şifre Değiştirme</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="passwordForm">
+                            <div class="mb-3">
+                                <label for="oldPassword" class="form-label">Eski Şifre</label>
+                                <input type="password" class="form-control" id="oldPassword" placeholder="Eski şifrenizi girin" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="newPassword" class="form-label">Yeni Şifre</label>
+                                <input type="password" class="form-control" id="newPassword" placeholder="Yeni şifrenizi girin" required>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100">Şifreyi Güncelle</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Hesap Silme -->
+                <div class="card mt-4">
+                    <div class="card-body text-center">
+                        <button id="deleteAccountBtn" class="btn btn-danger w-100">Hesabı Sil</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+        const profileForm = document.getElementById('profileForm');
+        const passwordForm = document.getElementById('passwordForm');
+        const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+        const changePhotoBtn = document.getElementById('changePhotoBtn');
+        const photoInput = document.getElementById('photoInput');
+
+        let userId = null;
+
+        function getCookie(name) {
+            const cookies = document.cookie.split('; ');
+            for (let cookie of cookies) {
+                const [key, value] = cookie.split('=');
+                if (key === name) {
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        // Session Token'dan userId alma
+        const sessionToken = getCookie('sessionToken');
+        if (!sessionToken) {
+            console.error('Session token bulunamadı!');
+            return;
+        }
+
+        // Profil bilgilerini yükle
+        try {
+            const sessionResponse = await fetch('/api/session/getUserFromSession', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionToken }),
+            });
+
+            const sessionData = await sessionResponse.json();
+
+            if (sessionData.userId) {
+                userId = sessionData.userId;
+
+                // Kullanıcı profil bilgilerini çek
+                const profileResponse = await fetch(`/api/users/${userId}`);
+                if (profileResponse.ok) {
+                    const profileData = await profileResponse.json();
+
+                    // Profil bilgilerini input placeholder'larına yerleştir
+                    document.getElementById('name').placeholder = profileData.name || 'Adınızı girin';
+                    document.getElementById('surname').placeholder = profileData.surname || 'Soyadınızı girin';
+                    document.getElementById('email').placeholder = profileData.email || 'E-posta adresinizi girin';
+
+                    // Profil fotoğrafını güncelle
+                    if (profileData.photo) {
+                        document.getElementById('profilePhoto').src = profileData.photo;
+                    }
+                } else {
+                    console.error('Profil bilgileri alınamadı');
+                }
+            } else {
+                console.error('Kullanıcı ID bulunamadı');
+            }
+        } catch (error) {
+            console.error('Profil bilgileri yüklenirken hata oluştu:', error);
+        }
+
+        // Profil bilgilerini güncelle
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value.trim();
+            const surname = document.getElementById('surname').value.trim();
+            const email = document.getElementById('email').value.trim();
+
+            const response = await fetch('/api/profile/update-profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, surname, email }),
+            });
+
+            if (response.ok) {
+                alert('Profil bilgileri başarıyla güncellendi.');
+            } else {
+                alert('Profil güncellenirken bir hata oluştu.');
+            }
+        });
+
+        // Şifreyi güncelle
+        passwordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const oldPassword = document.getElementById('oldPassword').value.trim();
+            const newPassword = document.getElementById('newPassword').value.trim();
+
+            const response = await fetch('/api/profile/change-password', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getCookie('sessionToken')}` // Eğer JWT token kullanıyorsanız
+                },
+                body: JSON.stringify({ oldPassword, newPassword }),
+            });
+
+            if (response.ok) {
+                alert('Şifre başarıyla güncellendi.');
+            } else {
+                const errorData = await response.json();
+                alert(`Şifre güncellenirken bir hata oluştu: ${errorData.message}`);
+            }
+        });
+
+
+        // Hesabı sil
+        deleteAccountBtn.addEventListener('click', async () => {
+            if (confirm('Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+                const response = await fetch('/api/profile/delete-account', {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    alert('Hesabınız başarıyla silindi.');
+                    window.location.href = '/logout';
+                } else {
+                    alert('Hesap silinirken bir hata oluştu.');
+                }
+            }
+        });
+
+        // Profil fotoğrafını değiştir
+        changePhotoBtn.addEventListener('click', () => photoInput.click());
+
+        photoInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('photo', file); // 'photo' backend'deki alan adıyla eşleşmeli
+
+                const response = await fetch('/api/profile/update-photo', {
+                    method: 'PUT',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('profilePhoto').src = data.photo;
+                    alert('Profil fotoğrafı başarıyla güncellendi.');
+                } else {
+                    alert('Profil fotoğrafı güncellenirken bir hata oluştu.');
+                }
+            }
+        });
+    });
+
+    </script>
+</body>
+</html>

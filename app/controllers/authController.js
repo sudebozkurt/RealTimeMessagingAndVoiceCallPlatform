@@ -8,17 +8,17 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 //require('dotenv').config();
-
-
 exports.registerUser = async (req, res) => {
     try {
         const { name, surname, username, password, email, security_question, security_answer } = req.body;
         const profilePic = req.file;
 
+        // Gerekli alanların kontrolü
         if (!name || !surname || !username || !password || !email || !security_question || !security_answer) {
             return res.status(400).json({ message: 'Tüm alanları doldurmanız gerekmektedir.' });
         }
 
+        // Kullanıcı ve e-posta kontrolü
         const [existingUser, existingEmail] = await Promise.all([
             User.findOne({ where: { username } }),
             User.findOne({ where: { email } }),
@@ -29,24 +29,33 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Kullanıcı adı veya e-posta zaten kayıtlı.' });
         }
 
+        // Şifrelerin hashlenmesi
         const hashedPassword = await bcrypt.hash(password, 10);
         const hashedSecurityAnswer = await bcrypt.hash(security_answer, 10);
 
+        // Fotoğraf yükleme ve dosya kaydetme işlemi
         let photoPath = null;
+
         if (profilePic) {
-            const md5Hash = crypto.createHash('md5').update(profilePic.originalname + Date.now()).digest('hex');
-            const fileExtension = path.extname(profilePic.originalname);
-            const hashedFileName = `${md5Hash}${fileExtension}`;
-            const uploadPath = path.join(__dirname, '../../uploads/profilePhotos', hashedFileName);
-
-            if (!fs.existsSync(path.join(__dirname, '../../uploads/profilePhotos'))) {
-                fs.mkdirSync(path.join(__dirname, '../../uploads/profilePhotos'), { recursive: true });
+            console.log('Yüklenen Dosya:', profilePic);
+        
+            const hashedFileName = profilePic.filename; // Multer tarafından oluşturulan dosya adı
+            const uploadPath = profilePic.path;
+        
+            // Kaydedilen dosyanın doğru bir şekilde işlendiğinden emin olun
+            if (fs.existsSync(uploadPath)) {
+                console.log('Dosya başarıyla kaydedildi:', uploadPath);
+                photoPath = `/uploads/profilePhotos/${hashedFileName}`;
+            } else {
+                console.error('Dosya kaydedilemedi:', uploadPath);
+                throw new Error('Dosya kaydedilemedi.');
             }
-
-            fs.writeFileSync(uploadPath, profilePic.buffer);
-            photoPath = `/uploads/profilePhotos/${hashedFileName}`;
+        } else {
+            console.log('Dosya yüklenmedi. Fotoğraf null olarak kalacak.');
         }
+               
 
+        // Kullanıcı oluşturma
         const newUser = await User.create({
             name,
             surname,
@@ -62,6 +71,7 @@ exports.registerUser = async (req, res) => {
 
         await logOperation(newUser.id, 'register', 'success', req.ip);
 
+        // Yanıt
         res.status(201).json({
             redirect: '/login',
             user: {
@@ -80,24 +90,26 @@ exports.registerUser = async (req, res) => {
 
 
 
+
 exports.loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
 
         const user = await User.findOne({
             where: {
-                [Op.or]: [{ username }],
+                username,
+                deleted_at: null, // Sadece silinmemiş kullanıcıları kontrol et
             },
         });
 
         if (!user) {
-            await logOperation(null, 'login', 'failure', req.ip); // Başarısız giriş loglanır
+            await logOperation(null, 'login', 'failure', req.ip);
             return res.status(401).json({ message: 'Geçersiz kullanıcı adı veya şifre' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            await logOperation(user.id, 'login', 'failure', req.ip); // Başarısız giriş loglanır
+            await logOperation(user.id, 'login', 'failure', req.ip);
             return res.status(401).json({ message: 'Geçersiz giriş bilgileri' });
         }
 
@@ -118,7 +130,7 @@ exports.loginUser = async (req, res) => {
             maxAge: process.env.SESSION_EXPIRY || 60 * 60 * 1000,
         });
 
-        await logOperation(user.id, 'login', 'success', req.ip); // Başarılı giriş loglanır
+        await logOperation(user.id, 'login', 'success', req.ip);
 
         const redirectPath = user.role === 'admin' ? '/admin' : '/index';
         return res.status(200).json({
@@ -126,7 +138,7 @@ exports.loginUser = async (req, res) => {
             sessionToken,
         });
     } catch (error) {
-        await logOperation(null, 'login', 'failure', req.ip); // Başarısız işlem loglanır
+        await logOperation(null, 'login', 'failure', req.ip);
         console.error('Giriş hatası:', error);
         res.status(500).json({ message: 'Sunucu hatası. Lütfen tekrar deneyin.' });
     }
