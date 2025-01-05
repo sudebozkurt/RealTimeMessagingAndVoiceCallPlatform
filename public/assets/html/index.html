@@ -186,35 +186,66 @@
 
 
        // Mesajları yükle
-        function loadMessages(contactId) {
-            fetch(`/api/messages/history/${userId}/${contactId}`)
-                .then(response => response.json())
-                .then(messages => {
-                    const chatBox = document.getElementById('chat-box');
-                    chatBox.innerHTML = '';
-                    messages.forEach(msg => {
-                        const messageDiv = document.createElement('div');
-                        messageDiv.classList.add(msg.senderID === userId ? 'message-sent' : 'message-received');
+       function loadMessages(contactId) {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';
 
-                        let statusIcon = '';
-                        if (msg.status === 'sent') {
-                            statusIcon = '<img src="../icons/send.png" alt="Sent" class="status-icon">';
-                        } else if (msg.status === 'delivered') {
-                            statusIcon = '<img src="../icons/delivered.png" alt="Delivered" class="status-icon">';
-                        } else if (msg.status === 'read') {
-                            statusIcon = '<img src="../icons/read.png" alt="Read" class="status-icon">';
-                        }
+            if (contactId === 1) {
+                // Eğer contactID 1 (admin) ise broadcast mesajlarını getir
+                fetch('/api/broadcastMessages')
+                    .then(response => response.json())
+                    .then(messages => {
+                        messages.forEach(message => {
+                            const messageDiv = document.createElement('div');
+                            messageDiv.classList.add('message-received');
+                            messageDiv.innerHTML = `
+                                <span>${message.message}</span>
+                            `;
+                            chatBox.appendChild(messageDiv);
+                        });
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    })
+                    .catch(error => console.error('Broadcast mesajları alınırken hata oluştu:', error));
+            } else {
+                // Normal kullanıcılar arasındaki mesajları getir
+                fetch(`/api/messages/history/${userId}/${contactId}`)
+                    .then(response => response.json())
+                    .then(messages => {
+                        messages.forEach(msg => {
+                            const messageDiv = document.createElement('div');
+                            messageDiv.classList.add(msg.senderID === userId ? 'message-sent' : 'message-received');
 
-                        messageDiv.innerHTML = `
-                            <span>${msg.message}</span>
-                            ${msg.senderID === userId ? statusIcon : ''}
-                        `;
-                        messageDiv.setAttribute('data-id', msg.ID); // Mesaj ID'sini sakla
-                        chatBox.appendChild(messageDiv);
-                    });
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                });
+                            // Mesajın durumuna göre ikon ekle
+                            const statusIcon = getStatusIcon(msg.status);
+
+                            messageDiv.innerHTML = `
+                                <span>${msg.message}</span>
+                                ${msg.senderID === userId ? `<img src="${statusIcon}" alt="${msg.status}" class="status-icon">` : ''}
+                            `;
+                            messageDiv.setAttribute('data-id', msg.id); // Mesaj ID'sini sakla
+                            chatBox.appendChild(messageDiv);
+                        });
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    })
+                    .catch(error => console.error('Mesajlar alınırken hata oluştu:', error));
+            }
         }
+
+        // Duruma göre ikon URL'sini dönen yardımcı fonksiyon
+        function getStatusIcon(status) {
+            switch (status) {
+                case 'sent':
+                    return '../icons/sent.png'; // Gönderildi ikonu
+                case 'delivered':
+                    return '../icons/delivered.png'; // Teslim edildi ikonu
+                case 'read':
+                    return '../icons/read.png'; // Okundu ikonu
+                default:
+                    return ''; // Durum tanımlı değilse boş döndür
+            }
+        }
+
+
 
         // Mesaj kutusunda kaydırma olduğunda `read` durumunu güncelle
         document.getElementById('chat-box').addEventListener('scroll', () => {
@@ -284,6 +315,21 @@
                 console.error('Frontend: Mesaj ID eksik!');
             }
         });
+
+        socket.on('receiveBroadcast', (message) => {
+            console.log('Yeni bir broadcast mesajı alındı:', message);
+            
+            const chatBox = document.getElementById('chat-box');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message-received');
+            messageDiv.innerHTML = `
+                <span>${message.message}</span>
+            `;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+
 
         socket.on('message-read-confirmation', (data) => {
             const messageElement = document.querySelector(`[data-id="${data.messageId}"]`);

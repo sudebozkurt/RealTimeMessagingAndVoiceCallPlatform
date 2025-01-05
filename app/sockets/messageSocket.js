@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Message = require('../models/Messages');
+const BroadcastMessage = require('../models/BroadcastMessage');
 const broadcastmessageController = require('../controllers/broadcastmessageController');
 
 // Kullanıcıların socket bağlantılarını takip etmek için bir nesne
@@ -130,7 +131,8 @@ const handleMessagingSockets = (io) => {
             } catch (error) {
                 console.error('Broadcast mesaj gönderim hatası:', error);
             }
-        });
+        });        
+        
 
         // Mesaj okundu
         socket.on('message-delivered', async (data) => {
@@ -152,15 +154,14 @@ const handleMessagingSockets = (io) => {
             }
         });        
         
-        socket.on('message-read', ({ messageId }) => {
-            const messageElement = document.querySelector(`[data-id="${messageId}"]`);
-            if (messageElement) {
-                const statusIcon = messageElement.querySelector('.status-icon');
-                if (statusIcon) {
-                    statusIcon.src = '../icons/read.png'; // Okundu ikonu
-                }
+        socket.on('message-read', async ({ messageId }) => {
+            const message = await Message.findByPk(messageId);
+            if (message) {
+                message.status = 'read';
+                await message.save();
+                io.to(userSockets[message.senderID]).emit('message-read', { messageId });
             }
-        });                      
+        });         
     });
 };
 
