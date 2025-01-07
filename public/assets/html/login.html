@@ -74,7 +74,8 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.redirect) {
-                        window.location.href = data.redirect;
+                        // Kullanıcıyı 2FA sayfasına yönlendirirken userId parametresini URL'ye ekle
+                        window.location.href = `${data.redirect}?userId=${data.userId}`;
                     } else {
                         alert('Başarılı giriş ancak yönlendirme URL\'si bulunamadı.');
                     }
@@ -88,6 +89,7 @@
                 alert('Sunucuya bağlanırken bir sorun oluştu.');
             }
         });
+
     </script>
 </body>
 </html>

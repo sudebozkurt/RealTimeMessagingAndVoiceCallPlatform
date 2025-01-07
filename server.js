@@ -18,6 +18,7 @@ const authenticateUser = require('./middlewares/authMiddleware');
 const sessionRoutes = require('./app/routes/sessionRoutes');
 const broadcastRoutes = require('./app/routes/broadcastmessageRoutes');
 const profileRoutes = require('./app/routes/profileRoutes');
+const twoFactorRoutes = require('./app/routes/twoFactorRoutes.js');
 
 // CORS ayarlarını tanımlayın
 const corsOptions = {
@@ -27,6 +28,7 @@ const corsOptions = {
 };
 // WebSocket modülleri
 const handleMessagingSockets = require('./app/sockets/messageSocket');
+const TwoFactorCode = require('./app/models/TwoFactorCode');
 // Sunucu ve socket.io yapılandırması
 const app = express();
 const server = http.createServer(app);
@@ -52,6 +54,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/session', sessionRoutes);
 app.use('/api/broadcastMessages', broadcastRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/2fa', twoFactorRoutes);
 
 
 // HTML sayfalarına yönlendirme
@@ -61,6 +64,9 @@ app.get('/index', authenticateUser, (req, res) => res.sendFile(path.join(__dirna
 app.get('/admin', authenticateUser, (req, res) => res.sendFile(path.join(__dirname, '/public/assets/html/admin.html')));
 app.get('/profileSettings', authenticateUser, (req, res) => {
     res.sendFile(path.join(__dirname, '/public/assets/html/profileSettings.html'));
+});
+app.get('/2fa', (req, res) => {
+    res.sendFile(path.join(__dirname, '/public/assets/html/twoFactor.html'));
 });
 
 // Ana index rotası

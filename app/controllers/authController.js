@@ -2,12 +2,16 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const User = require('../models/User');
 const Session = require('../models/Session');
-const LoginRegisterLog = require('../models/LoginRegisterLog')
+const LoginRegisterLog = require('../models/LoginRegisterLog');
+const TwoFactorCode = require('../models/TwoFactorCode');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-//require('dotenv').config();
+const nodemailer = require('nodemailer');
+const { send2FACode } = require('./twoFactorController'); 
+require('dotenv').config();
+
 exports.registerUser = async (req, res) => {
     try {
         const { name, surname, username, password, email, security_question, security_answer } = req.body;
@@ -88,58 +92,59 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-
-
-
 exports.loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
 
         const user = await User.findOne({
-            where: {
-                username,
-                deleted_at: null, // Sadece silinmemiş kullanıcıları kontrol et
-            },
+            where: { username, deleted_at: null },
         });
 
         if (!user) {
-            await logOperation(null, 'login', 'failure', req.ip);
             return res.status(401).json({ message: 'Geçersiz kullanıcı adı veya şifre' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            await logOperation(user.id, 'login', 'failure', req.ip);
             return res.status(401).json({ message: 'Geçersiz giriş bilgileri' });
         }
 
-        const sessionToken = uuidv4();
-        const sessionExpiry = new Date(Date.now() + (process.env.SESSION_EXPIRY || 60 * 60 * 1000));
+        // 2FA kodu oluştur ve kaydet
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expires_at = new Date(Date.now() + 2 * 60 * 1000); // 2 dakika geçerli
 
-        await Session.create({
-            UUID: uuidv4(),
+        await TwoFactorCode.destroy({ where: { userID: user.id } }); // Eski kodları sil
+        await TwoFactorCode.create({
             userID: user.id,
-            token: sessionToken,
-            expires_at: sessionExpiry,
+            code,
+            expires_at,
         });
 
-        res.cookie('sessionToken', sessionToken, {
-            httpOnly: false,
-            secure: false,
-            sameSite: 'Strict',
-            maxAge: process.env.SESSION_EXPIRY || 60 * 60 * 1000,
+        // Kullanıcının e-posta adresine 2FA kodu gönder
+        const transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
         });
 
-        await logOperation(user.id, 'login', 'success', req.ip);
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: '2FA Kodunuz',
+            text: `Giriş yapabilmeniz için doğrulama kodunuz: ${code}. Bu kod 2 dakika geçerlidir.`,
+        };
 
-        const redirectPath = user.role === 'admin' ? '/admin' : '/index';
-        return res.status(200).json({
-            redirect: redirectPath,
-            sessionToken,
+        await transporter.sendMail(mailOptions);
+
+        // Kullanıcıyı 2FA sayfasına yönlendir
+        res.status(200).json({
+            redirect: '/2fa',
+            userId: user.id,
         });
     } catch (error) {
-        await logOperation(null, 'login', 'failure', req.ip);
-        console.error('Giriş hatası:', error);
+        console.error('Login sırasında bir hata oluştu:', error);
         res.status(500).json({ message: 'Sunucu hatası. Lütfen tekrar deneyin.' });
     }
 };

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2FA Doğrulama</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .verification-container {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        .verification-container h2 {
+            margin-bottom: 1rem;
+        }
+        .verification-container input {
+            text-align: center;
+            letter-spacing: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="verification-container">
+        <h2>2FA Doğrulama</h2>
+        <p>Lütfen e-posta adresinize gönderilen doğrulama kodunu girin.</p>
+        <form id="twoFactorForm">
+            <input type="text" id="verificationCode" class="form-control mb-3" placeholder="6 Haneli Kod" maxlength="6" required>
+            <button type="submit" class="btn btn-primary w-100">Doğrula</button>
+        </form>
+        <p class="mt-3 text-muted">Kodunuz ulaşmadı mı? <a href="#" id="resendCode">Tekrar Gönder</a></p>
+    </div>
+
+    <script>
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // userId'yi URL'den al
+        const userId = getQueryParam('userId');
+
+        if (!userId) {
+            alert('Kullanıcı ID bulunamadı! Giriş ekranına yönlendiriliyorsunuz.');
+            window.location.href = '/login';
+        }
+
+
+        // 2FA doğrulama formunu işleme
+        document.getElementById('twoFactorForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const verificationCode = document.getElementById('verificationCode').value.trim();
+
+            if (!verificationCode || verificationCode.length !== 6) {
+                alert('Geçerli bir 6 haneli kod girin.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/2fa/verify-2fa-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, code: verificationCode }), // userId eklendi
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.redirect) {
+                    // Başarılı doğrulama, yönlendirme
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.message || 'Doğrulama başarısız. Lütfen kodu kontrol edin.');
+                }
+            } catch (error) {
+                console.error('2FA doğrulama hatası:', error);
+                alert('Doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+            }
+        });
+
+
+        // Kod yeniden gönderme işlevi
+        document.getElementById('resendCode').addEventListener('click', async (event) => {
+            event.preventDefault();
+
+            try {
+                const response = await fetch('/api/2fa/send-2fa-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(data.message || 'Kod yeniden gönderildi.');
+                } else {
+                    alert(data.message || 'Kod gönderilirken bir hata oluştu.');
+                }
+            } catch (error) {
+                console.error('Kod yeniden gönderim hatası:', error);
+                alert('Kod gönderme sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+            }
+        });
+
+    </script>
+</body>
+</html>
