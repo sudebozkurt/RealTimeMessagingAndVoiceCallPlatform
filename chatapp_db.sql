@@ -107,3 +107,22 @@ CREATE TABLE `sessions` (
   KEY `idx_sessions_userId` (`userID`),
   CONSTRAINT `Sessions_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`ID`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE TwoFactorCodes (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    userID INT UNSIGNED NOT NULL,
+    code VARCHAR(6) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    FOREIGN KEY (userID) REFERENCES users(ID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+INSERT INTO `Users` (`name`, `surname`, `username`, `password`, `email`, `role`, `photo`, `uuid`, `created_at`, `deleted_at`, `security_question`, `security_answer`) 
+VALUES
+('Admin', 'Admin', 'admin', '$2a$10$sTuDiYin1/vCDJpOJMipCuFU5IqmMKih5OrpRTK.ZfV.Iwf9eQz36', 'admin@example.com', 'admin', '/uploads/profilePhotos/9cb3eaecb4ea12ecabdf7307541c993a.png', 'a43c5520-e605-476c-af82-b9cf2d56e2fd', '2024-12-19 22:10:42', NULL, 'city', 'LA'),
+('Sude', 'Bozkurt', 'sudeb', '$2a$10$E.9QJ9/y1PQNLnoGyvrNKeJ7WL1t6n/THMaXABDf9IatTUkLOP4i2', 'sude@ex.co', 'user', '/uploads/profilePhotos/3483f9ab99d9f0d959151f25d1f89339.jpeg', 'e0b00a87-9682-4660-ae59-69762a895f31', '2024-12-19 22:16:03', NULL, 'city', 'İst'),
+('Ali', 'Veli', 'aliveli', '$2a$10$w9fzfJ3DI8qnYG2S8LD/S./LF93ti6sVBi/e7JFenVolgRNWz1h5O', 'aliveli@example.com', 'user', '/uploads/profilePhotos/10f7c293a453c391d991e98fdc6e34f2.jpeg', 'd7fb826f-3c41-4de8-96e1-c28331d0ad94', '2024-12-19 22:18:09', NULL, 'pet', 'Tekila'),
+('deneme2', 'deneme2', 'deneme2', '$2a$10$y/57.C3cCjiyB5KbVXh.9u7tyIL.g3UjPkM2I5XY2wDX8nfgw9Ola', 'deneme4@ex.co', 'user', '/uploads/profilePhotos/902efacad89654243d1fc948745d5706.jpeg', '079d38fa-c561-48f6-9da2-4754aa42d8e2', '2024-12-19 22:19:28', NULL, 'school', 'asd');
+
+SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));
