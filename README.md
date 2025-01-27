@@ -12,7 +12,6 @@ ChatApp, gerçek zamanlı iletişim sağlayan bir sohbet uygulamasıdır. Bireys
 - **npm:** Node.js paketlerini yönetmek için kullanılan bir araçtır.
 - **MySQL:** Kullanıcı verilerinin güvenli ve ölçeklenebilir bir şekilde saklanmasını sağlar.
 - **Socket.IO:** Gerçek zamanlı mesajlaşmayı mümkün kılan bir kütüphanedir.
-- **WebRTC:-- Sesli iletişim desteği sunar.
 
 ## Kurulum 
 - Depoyu klonlayın:
@@ -52,8 +51,8 @@ http://localhost:5000 adresine giderek uygulamaya erişin.
 - **Veritabanı:** MySQL
   Kullanıcı bilgilerini ve sohbet geçmişini güvenli bir şekilde saklar.
 
-- **Gerçek Zamanlı İletişim:** Socket.IO, WebRTC
-  Anlık mesajlaşma ve sesli iletişim özelliklerini mümkün kılar.
+- **Gerçek Zamanlı İletişim:** Socket.IO
+  Anlık mesajlaşma özelliklerini mümkün kılar.
 ---
 **Eğer her hangi bir sorun yaşarsanız, lütfen bir issue oluşturun veya katkıda bulunanlarla iletişime geçin.**
 ### Keyifli kodlamalar!
